@@ -1,3 +1,4 @@
+
 function decodedFile = full_codec(originalFile,bitrate,decodedFile,codedFile)
 % FULL_CODEC encodes and decodes an audio file
 %   decodedFile = FULL_CODEC(originalFile) encodes and decodes original file
@@ -22,7 +23,7 @@ function decodedFile = full_codec(originalFile,bitrate,decodedFile,codedFile)
 % Copyright 2002, Jon Boley (jdb@jboley.com)
 
 if nargin<4
-    codedFile = 'yourfile.jon';full
+    codedFile = 'yourfile.jon';
 end
 if nargin<3
     decodedFile = 'yourfile_decoded.wav';
@@ -35,59 +36,59 @@ if nargin<1
 end
 
 scalebits = 4;
-N = 2048;                                                                  % framelength
-
-[Y,Fs] = audioread(originalFile);                                          % read audio file
-Y = Y(:,1);                                                                % just use the first channel Y from (40)
-
-sig=sin(2*pi*1000*(1:N/2)/Fs);                                             % N (38) Fs from audioread (40)
-win=(0.5 - 0.5*cos((2*pi*((1:(N/2))-0.5))/(N/2)));                         % Hanning window?
-fftmax = max(abs(fft(sig.*win)));                                          % defined as 96dB. sig (43) win (44). looking for max fft value of convolution between sig and win
+N = 2048; % framelength
+%%
+[Y,Fs] = audioread(originalFile);
+Y = Y(:,1); % just use the first channel
+%%
+sig=sin(2*pi*1000*(1:N/2)/Fs);
+win=(0.5 - 0.5*cos((2*pi*((1:(N/2))-0.5))/(N/2))); 
+fftmax = max(abs(fft(sig.*win))); % defined as 96dB  %Normalization
 
 %   Enframe Audio   
-frames = enframe(Y,N,N/2);                                                 % enframe audio.returns "frames" Takes Y from audioread(40) and splits into N length windows (38)in increments of N/2
+frames = enframe(Y,N,N/2);
 
 % Write File Header 
 fid = fopen(codedFile,'w');
-fwrite(fid, Fs, 'ubit16');                                                 % Sampling Frequency
-fwrite(fid, N, 'ubit12');                                                  % Frame Length
-fwrite(fid, bitrate, 'ubit18');                                            % Bit Rate
-fwrite(fid, scalebits, 'ubit4');                                           % Number of Scale Bits per Sub-Band
-fwrite(fid, length(frames(:,1)), 'ubit26');                                % Number of frames
+fwrite(fid, Fs, 'ubit16'); % Sampling Frequency
+fwrite(fid, N, 'ubit12'); % Frame Length
+fwrite(fid, bitrate, 'ubit18'); % Bit Rate
+fwrite(fid, scalebits, 'ubit4'); % Number of Scale Bits per Sub-Band
+fwrite(fid, length(frames(:,1)), 'ubit26'); % Number of frames
     
-numBands = floor(fftbark(N/2,N/2,Fs))+1;                                   %finds number of bands to be used by Bark scale
+numBands = floor(fftbark(N/2,N/2,Fs))+1;
 
 %   Computations    
-for frame_count=1:length(frames(:,1))                                      % for each frame, 1 through the first channel of frames (48)
+for frame_count=1:length(frames(:,1))
 
-    if mod(frame_count,10) == 0                                            % if frame_count/10 equals 0...
-        outstring = sprintf('Now Encoding Frame %i of %i', frame_count, length(frames(:,1))); % message equals "now encoding" with frame number of total frame numbers
-        disp(outstring);                                                   % display message
+    if mod(frame_count,10) == 0
+        outstring = sprintf('Now Encoding Frame %i of %i', frame_count, length(frames(:,1)));
+        disp(outstring);
     end
     
-    fft_frame = fft(frames(frame_count,:));                                % fft of enframed audio
+    fft_frame = fft(frames(frame_count,:));
 
-    if fft_frame == zeros(1,N)                                             % if fft_frame equals a vector of zeros of length N...
-        Gain = zeros(1,numBands);                                          % Gain equals a vector of zeros the same length as the number of bands in the bark scale fft(58)
-        bit_alloc = zeros(1,numBands);                                     % bit_alloc is also equal to a vector of zeros the same length as the number of bands in the bark scale fft (58)
-    else                                                                   % if fft_frame DOES NOT equal a vector of zeros of length N...
-        len = length(fft_frame);                                           % variable len is equal to the length of fft_frame (68)
-        peak_width = zeros(1,len);                                         % variable peak_width is equal to a vector of zeros of length "len" (74)
-                                                                           % looks like we're setting up empty (zero) vectors to store data
+    if fft_frame == zeros(1,N)
+        Gain = zeros(1,numBands);
+        bit_alloc = zeros(1,numBands);
+    else    
+        len = length(fft_frame);
+        peak_width = zeros(1,len);
+
         % Find Peaks
-        centers = find(diff(sign(diff(abs(fft_frame).^2) )) == -2) + 1;
-        spectral_density = zeros(1,length(centers));                       % set up empty (zero) vector of the same length as the centers variable (78)
+        centers = find(diff(sign(diff( abs(fft_frame).^2) )) == -2) + 1;
+        spectral_density = zeros(1,length(centers));
     
-        peak_max = NaN*ones(size(centers));                                % set empty array for maximum peak values
-        peak_min = NaN*ones(size(centers));                                % set empty array for minimum peak values
-        for k=1:numel(centers)                                             % for indices k = 1 through the number of elements in variable "centers" (78)...
-            peak_max(k) = centers(k) +2;                                   % replace k index of peak_max (81) with k index of centers (78) plus 2
-            peak_min(k) = centers(k) - 2;                                  % replace k index of peak_min (82) with k index of centers (78) minus 2
-            peak_width(k) = peak_max(k) - peak_min(k);                     % peak_width is the difference between new peak_max (84) and new peak_min(85)
+        peak_max = NaN*ones(size(centers));
+        peak_min = NaN*ones(size(centers));
+        for k=1:numel(centers)
+            peak_max(k) = centers(k) +2;
+            peak_min(k) = centers(k) - 2;
+            peak_width(k) = peak_max(k) - peak_min(k);
             
-            for j=peak_min(k):peak_max(k)                                  % for j equals the vector between peak_min(84) and peak_max (85) at index k (83)...
-                if (j > 0) && (j < N)                                      % if j(88) is greater than 0 AND less than N (38)...
-                    spectral_density(k) = spectral_density(k) + abs(fft_frame(j))^2; % replace spectral_density (79) at index k with current value plus the squared amplitute of fft_frame(68) at index j
+            for j=peak_min(k):peak_max(k)
+                if (j > 0) && (j < N)
+                    spectral_density(k) = spectral_density(k) + abs(fft_frame(j))^2;
                 end
             end
         end
@@ -176,7 +177,7 @@ function b=fftbark(bin,N,Fs)
 f = bin*(Fs/2)/N;
 b = 13*atan(0.76*f/1000) + 3.5*atan((f/7500).^2); 
 
-%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %          ENFRAME          %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -237,7 +238,7 @@ if (nwin > 1)
     w = win(:)';
     f = f .* w(ones(nf,1),:);
 end
-%%
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %          SCHROEDER        %
@@ -253,7 +254,7 @@ mask = 15.81 + 7.5*(dz+0.474) - 17.5*sqrt(1 + (dz+0.474).^2);
 
 New_mask = (mask + spl - downshift);
 
-%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %           BARK            %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -264,7 +265,7 @@ function b=bark(f)
 
 b = 13*atan(0.76*f/1000) + 3.5*atan((f/7500).^2); 
 
-%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %        ALLOCATE           %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -312,7 +313,7 @@ while bitsleft > num_crit_band_samples(ii)
 end
 
 
-%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %        P_ENCODE           %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -337,7 +338,7 @@ for ii=1:numel(x2)
     quantized_words(ii) = midtread_quantizer(x2(ii), max(bit_alloc(floor(fftbark(ii,framelength/2,Fs))+1),0)+1e-10); % 03/20/03
 end
 
-%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %    MIDTREAD_QUANTIZER     %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -348,7 +349,7 @@ q = quant(x,Q);
 s = q<0;    
 ret_value = uint16(abs(q)./Q + s*2^(R-1));
 
-%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %   MIDTREAD_DEQUANTIZER    %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -364,7 +365,7 @@ x = double(x);
 ret_value = sign * Q .* x;
 
 
-%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %         P_DECODE          %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -444,7 +445,7 @@ end
 audiowrite(decoded_filename,x3,Fs);
 
 
-%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %           MDCT            %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -462,7 +463,7 @@ X = fft(x);
 y = real(X(1:N/2) .* exp(-1i*2*pi*n0*((0:N/2-1)'+0.5)/N));
 y=y(:);
 
-%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %          IMDCT            %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
