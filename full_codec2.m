@@ -1,4 +1,4 @@
-function decodedFile = full_codec(originalFile,bitrate,decodedFile,codedFile)
+ mfunction decodedFile = full_codec(originalFile,bitrate,decodedFile,codedFile)
 % FULL_CODEC encodes and decodes an audio file
 %   decodedFile = FULL_CODEC(originalFile) encodes and decodes original file
 %   decodedFile = FULL_CODEC(originalFile,bitrate) lets you specify the
@@ -33,13 +33,13 @@ end
 if nargin<1
     originalFile = 'yourfile.wav';
 end
-%%
+
 scalebits = 4;
-N = 2048;                                                                  % frame rate
-%%
+N = 2048;                                                                  % framelength
+
 [Y,Fs] = audioread(originalFile);                                          % read audio file
 Y = Y(:,1);                                                                % just use the first channel Y from (40)
-%%
+
 sig=sin(2*pi*1000*(1:N/2)/Fs);                                             % N (38) Fs from audioread (40)
 win=(0.5 - 0.5*cos((2*pi*((1:(N/2))-0.5))/(N/2)));                         % Hanning window?
 fftmax = max(abs(fft(sig.*win)));                                          % defined as 96dB. sig (43) win (44). looking for max fft value of convolution between sig and win
@@ -69,13 +69,13 @@ for frame_count=1:length(frames(:,1))                                      % for
 
     if fft_frame == zeros(1,N)                                             % if fft_frame equals a vector of zeros of length N...
         Gain = zeros(1,numBands);                                          % Gain equals a vector of zeros the same length as the number of bands in the bark scale fft(58)
-        bit_alloc = zeros(1,numBands);    %                                 % bit_alloc is also equal to a vector of zeros the same length as the number of bands in the bark scale fft (58)
+        bit_alloc = zeros(1,numBands);                                     % bit_alloc is also equal to a vector of zeros the same length as the number of bands in the bark scale fft (58)
     else                                                                   % if fft_frame DOES NOT equal a vector of zeros of length N...
         len = length(fft_frame);                                           % variable len is equal to the length of fft_frame (68)
         peak_width = zeros(1,len);                                         % variable peak_width is equal to a vector of zeros of length "len" (74)
                                                                            % looks like we're setting up empty (zero) vectors to store data
         % Find Peaks
-        centers = find(diff(sign(diff(abs(fft_frame).^2) )) == -2) + 1;    % finds center of power spectrum of enframed audioqaZ
+        centers = find(diff(sign(diff(abs(fft_frame).^2) )) == -2) + 1;
         spectral_density = zeros(1,length(centers));                       % set up empty (zero) vector of the same length as the centers variable (78)
     
         peak_max = NaN*ones(size(centers));                                % set empty array for maximum peak values
@@ -98,46 +98,46 @@ for frame_count=1:length(frames(:,1))                                      % for
         SPL = 96 + 10*log10(modified_SD);
         
         % TRANSFORM FFT'S TO SPL VALUES
-        fft_spl = 96 + 20*log10(abs(fft_frame)/fftmax);                    % convert fft_frames to decibels (sound pressure level values)                    %highest possible value should be 0dB  %fft SPL Normalization
+        fft_spl = 96 + 20*log10(abs(fft_frame)/fftmax);
     
     
         % Threshold in Quiet
-        f_kHz = (1:Fs/N:Fs/2)/1000;                                        % frequency in Hz to be used in Threshold in quiet equation (106)
-        A = 3.64*(f_kHz).^(-0.8) - 6.5*exp(-0.6*(f_kHz - 3.3).^2) + (10^(-3))*(f_kHz).^4; % THIS is the minimum threshold of audibility. This is our comparison point. Signals that fall below this line are inaudible and irrelevant (we can put noise down there)
+        f_kHz = (1:Fs/N:Fs/2)/1000;
+        A = 3.64*(f_kHz).^(-0.8) - 6.5*exp(-0.6*(f_kHz - 3.3).^2) + (10^(-3))*(f_kHz).^4;
     
-        % Masking Spectrum (Spend some time here)
-        big_mask = max(A,Schroeder(Fs,N,centers(1)*Fs/N,fft_spl(centers(1)),... % returns a matrix (big_mask) containing the largest value out of a comparison between A(the threshold in quiet) and the Schoder spreading mask. Takes centers (78) as maskee frequencies and spl of centers(1)
+        % Masking Spectrum
+        big_mask = max(A,Schroeder(Fs,N,centers(1)*Fs/N,fft_spl(centers(1)),...
             14.5+bark(centers(1)*Fs/N)));
-        for peak_count=2:sum(centers*Fs/N<=Fs/2) %for each value of "peak_count" between two and the sum of the center frequency bins that are below the nyquist frequency...
-            big_mask = max(big_mask,Schroeder(Fs,N,centers(peak_count)*Fs/N,...  % new big_mask equals larger value between old big mask and new Schroeder spreading function using centers of peak_count as given frequencies
+        for peak_count=2:sum(centers*Fs/N<=Fs/2)
+            big_mask = max(big_mask,Schroeder(Fs,N,centers(peak_count)*Fs/N,...
                 fft_spl(centers(peak_count)), 14.5+bark(centers(peak_count)*Fs/N)));
         end
 
         % Signal Spectrum - Masking Spectrum (with max of 0dB)
-        New_FFT = fft_spl(1:N/2)-big_mask;                                 % New_FFT = fft_spl(101) from 1 to half the frame length, minus big_mask (112)
-        New_FFT_indices = find(New_FFT > 0);                               %find indices of New_FFT (117) that are larger than zero
-        New_FFT2 = zeros(1,N/2);                                           % set an array of zeros of length N/2
-        for ii=1:length(New_FFT_indices)                                   % for ii from 1 to the length of New_FFT_indices (118)...
-            New_FFT2(New_FFT_indices(ii)) = New_FFT(New_FFT_indices(ii));  % iterate through New_FFT_indices (118) from 1 through its length, and place values within New_FFT2 (119)
+        New_FFT = fft_spl(1:N/2)-big_mask;
+        New_FFT_indices = find(New_FFT > 0);
+        New_FFT2 = zeros(1,N/2);
+        for ii=1:length(New_FFT_indices)
+            New_FFT2(New_FFT_indices(ii)) = New_FFT(New_FFT_indices(ii));
         end
     
-        if frame_count == 55                                               %if frame_count (61) equals 55...
-            semilogx(0:(Fs/2)/(N/2):Fs/2-1,fft_spl(1:N/2),'b');            % semilogarithmic plot of fft_spl(101) in blue
-            hold on;                                                       % plot on top of...
-            semilogx(0:(Fs/2)/(N/2):Fs/2-1,big_mask,'m');                  % semilogarighmic plot of big_mask (112) in pink
-            hold off;                                                      % complete this plot
-            title('Signal (blue) and Masking Spectrum (pink)');            % title of semilog plots
-            figure;                                                        % new plot
-            semilogx(0:(Fs/2)/(N/2):Fs/2-1,New_FFT2);                      % semilogarithmic plot of New_FFT1 (121) Signal to Masking Ratio
-            title('SMR');                                                  % Title of New_FFT2 plot
-            figure;                                                        % New plot
-            stem(allocate(New_FFT2,bitrate,scalebits,N,Fs));               % plot bit allocation of new_fft2 (121)
-            title('Bits perceptually allocated');                          % Title of stem plot
+        if frame_count == 55
+            semilogx(0:(Fs/2)/(N/2):Fs/2-1,fft_spl(1:N/2),'b');
+            hold on;
+            semilogx(0:(Fs/2)/(N/2):Fs/2-1,big_mask,'m');
+            hold off;
+            title('Signal (blue) and Masking Spectrum (pink)');
+            figure;
+            semilogx(0:(Fs/2)/(N/2):Fs/2-1,New_FFT2);
+            title('SMR');
+            figure;
+            stem(allocate(New_FFT2,bitrate,scalebits,N,Fs));
+            title('Bits perceptually allocated');
         end
         
-        bit_alloc = allocate(New_FFT2,bitrate,scalebits,N,Fs);  %             %bit allocation of New_FFT2 (see allocate function)
+        bit_alloc = allocate(New_FFT2,bitrate,scalebits,N,Fs);
     
-        [Gain,Data] = p_encode(mdct(frames(frame_count,:)),Fs,N,bit_alloc,scalebits); %Run the Encoder
+        [Gain,Data] = p_encode(mdct(frames(frame_count,:)),Fs,N,bit_alloc,scalebits);
     end % end of If-Else Statement        
         
     % Write Audio Data to File
@@ -164,11 +164,11 @@ disp('Okay, all done!');
 
 
 
-%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %          FFTBARK          %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function b=fftbark(bin,N,Fs)
+function b=fftbark(bin,N,Fs)                        
 % b=fftbark(bin,N,Fs)
 % Converts fft bin number to bark scale
 % N is the fft length
@@ -176,7 +176,7 @@ function b=fftbark(bin,N,Fs)
 f = bin*(Fs/2)/N;
 b = 13*atan(0.76*f/1000) + 3.5*atan((f/7500).^2); 
 
-%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %          ENFRAME          %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -237,22 +237,23 @@ if (nwin > 1)
     w = win(:)';
     f = f .* w(ones(nf,1),:);
 end
-%%
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %          SCHROEDER        %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function New_mask = Schroeder(Fs,N,freq,spl,downshift)
-% Calculate the Schroeder masking spectrum for a given frequency and SPLkb
-f_Hz = 1:Fs/N:Fs/2;                                                        %frequency in hertz equals an array from 1 to half the sampling rate (nyquist frequency), separated into segments Fs/N (sampling rate/ block size)
+% Calculate the Schroeder masking spectrum for a given frequency and SPL
+
+f_Hz = 1:Fs/N:Fs/2;
 
 % Schroeder Spreading Function
-dz = bark(freq)-bark(f_Hz);                                                % bark scale difference between the maskee (bark(freq)) and the masker (bark(f_Hz)) frequencies.
-mask = 15.81 + 7.5*(dz+0.474) - 17.5*sqrt(1 + (dz+0.474).^2);              % Schroeder spreading function equation
+dz = bark(freq)-bark(f_Hz);
+mask = 15.81 + 7.5*(dz+0.474) - 17.5*sqrt(1 + (dz+0.474).^2);
 
-New_mask = (mask + spl - downshift);                                       % masking curve derived at each frequency location
+New_mask = (mask + spl - downshift);
 
-%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %           BARK            %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -263,7 +264,7 @@ function b=bark(f)
 
 b = 13*atan(0.76*f/1000) + 3.5*atan((f/7500).^2); 
 
-%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %        ALLOCATE           %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -275,7 +276,7 @@ function x=allocate(y,bitrate,scalebits,N,Fs)
 % artifact reduction (reduce high frequency bands at low bitrates)
 numBandsToIgnore = 2*floor(128000/bitrate);
 
-num_subbands = floor(fftbark(N/2,N/2,Fs))+1;                                 % define number of subbands based on fftbark
+num_subbands = floor(fftbark(N/2,N/2,Fs))+1;
 bits_per_frame = floor(((bitrate/Fs)*(N/2)) - (scalebits*num_subbands));
         
 bits(floor(bark( (Fs/2)*(1:N/2)/(N/2) )) +1) = 0;
@@ -297,7 +298,7 @@ crit_band = floor(z)+1;
 num_crit_bands = max(crit_band);
 num_crit_band_samples = zeros(num_crit_bands,1);
 for ii=1:N/2
-    num_crit_band_samples(crit_band(ii)) = num_crit_band_samples(crit_band(ii)) + 1;    %%Spend some time here
+    num_crit_band_samples(crit_band(ii)) = num_crit_band_samples(crit_band(ii)) + 1;
 end
 
 x = zeros(1,num_subbands);
@@ -311,7 +312,7 @@ while bitsleft > num_crit_band_samples(ii)
 end
 
 
-%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %        P_ENCODE           %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -336,7 +337,7 @@ for ii=1:numel(x2)
     quantized_words(ii) = midtread_quantizer(x2(ii), max(bit_alloc(floor(fftbark(ii,framelength/2,Fs))+1),0)+1e-10); % 03/20/03
 end
 
-%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %    MIDTREAD_QUANTIZER     %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -347,7 +348,7 @@ q = quant(x,Q);
 s = q<0;    
 ret_value = uint16(abs(q)./Q + s*2^(R-1));
 
-%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %   MIDTREAD_DEQUANTIZER    %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -363,7 +364,7 @@ x = double(x);
 ret_value = sign * Q .* x;
 
 
-%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %         P_DECODE          %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -443,7 +444,7 @@ end
 audiowrite(decoded_filename,x3,Fs);
 
 
-%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %           MDCT            %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -461,7 +462,7 @@ X = fft(x);
 y = real(X(1:N/2) .* exp(-1i*2*pi*n0*((0:N/2-1)'+0.5)/N));
 y=y(:);
 
-%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %          IMDCT            %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
