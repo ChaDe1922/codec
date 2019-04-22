@@ -22,7 +22,7 @@ function decodedFile = full_codec(originalFile,bitrate,decodedFile,codedFile)
 % Copyright 2002, Jon Boley (jdb@jboley.com)
 
 if nargin<4
-    codedFile = 'yourfile.jon';full
+    codedFile = 'yourfile.jon';%full
 end
 if nargin<3
     decodedFile = 'yourfile_decoded.wav';
@@ -35,7 +35,7 @@ if nargin<1
 end
 %%
 scalebits = 4;
-N = 2048;                                                                  % frame rate
+N = 2048;                                                % frame rate
 %%
 [Y,Fs] = audioread(originalFile);                                          % read audio file
 Y = Y(:,1);                                                                % just use the first channel Y from (40)
@@ -45,8 +45,8 @@ win=(0.5 - 0.5*cos((2*pi*((1:(N/2))-0.5))/(N/2)));                         % Han
 fftmax = max(abs(fft(sig.*win)));                                          % defined as 96dB. sig (43) win (44). looking for max fft value of convolution between sig and win
 
 %   Enframe Audio   
-frames = enframe(Y,N,N/2);                                                 % enframe audio.returns "frames" Takes Y from audioread(40) and splits into N length windows (38)in increments of N/2
-
+frames = enframe(Y,N,N/2);                                                 % enframe audio.returns "frames" Takes Y from audioread(40) and splits into N length windows (38)in increments of N/2. 57 frames in length
+%%
 % Write File Header 
 fid = fopen(codedFile,'w');
 fwrite(fid, Fs, 'ubit16');                                                 % Sampling Frequency
@@ -54,17 +54,17 @@ fwrite(fid, N, 'ubit12');                                                  % Fra
 fwrite(fid, bitrate, 'ubit18');                                            % Bit Rate
 fwrite(fid, scalebits, 'ubit4');                                           % Number of Scale Bits per Sub-Band
 fwrite(fid, length(frames(:,1)), 'ubit26');                                % Number of frames
-    
+%%    
 numBands = floor(fftbark(N/2,N/2,Fs))+1;                                   %finds number of bands to be used by Bark scale
 
-%   Computations    
-for frame_count=1:length(frames(:,1))                                      % for each frame, 1 through the first channel of frames (48)
+%%   Computations    
+for frame_count=1:length(frames(:,1))                                      % for each frame(48), 1 through 57 
 
     if mod(frame_count,10) == 0                                            % if frame_count/10 equals 0...
         outstring = sprintf('Now Encoding Frame %i of %i', frame_count, length(frames(:,1))); % message equals "now encoding" with frame number of total frame numbers
         disp(outstring);                                                   % display message
     end
-    
+%   
     fft_frame = fft(frames(frame_count,:));                                % fft of enframed audio
 
     if fft_frame == zeros(1,N)                                             % if fft_frame equals a vector of zeros of length N...
@@ -122,6 +122,7 @@ for frame_count=1:length(frames(:,1))                                      % for
         end
     
         if frame_count == 55                                               %if frame_count (61) equals 55...
+            figure;
             semilogx(0:(Fs/2)/(N/2):Fs/2-1,fft_spl(1:N/2),'b');            % semilogarithmic plot of fft_spl(101) in blue
             hold on;                                                       % plot on top of...
             semilogx(0:(Fs/2)/(N/2):Fs/2-1,big_mask,'m');                  % semilogarighmic plot of big_mask (112) in pink
@@ -248,7 +249,7 @@ f_Hz = 1:Fs/N:Fs/2;                                                        %freq
 
 % Schroeder Spreading Function
 dz = bark(freq)-bark(f_Hz);                                                % bark scale difference between the maskee (bark(freq)) and the masker (bark(f_Hz)) frequencies.
-mask = 15.81 + 7.5*(dz+0.474) - 17.5*sqrt(1 + (dz+0.474).^2);              % Schroeder spreading function equation
+mask = 15.81 + 7.5*(1.05*dz+0.474) - 17.5*sqrt(1 + (1.05*dz+0.474).^2) + 8*min(0, min((1.05*dz-0.5).^2, 2*(1.05*dz-0.5)));              % Schroeder spreading function equation
 
 New_mask = (mask + spl - downshift);                                       % masking curve derived at each frequency location
 
@@ -292,7 +293,7 @@ bits(end-numBandsToIgnore:end) = 0; % artifact reduction
 n = 0:N/2-1;
 f_Hz = n*Fs/N;
 f_kHz = f_Hz / 1000;
-z = 13*atan(0.76*f_kHz) + 3.5*atan((f_kHz/7.5).^2);  % *** bark frequency scale
+z = 13*atan(0.76*f_kHz) + 3.5*atan((f_kHz/7.5).^2);                        % critical band rate formula                      % *** bark frequency scale
 crit_band = floor(z)+1;
 num_crit_bands = max(crit_band);
 num_crit_band_samples = zeros(num_crit_bands,1);
